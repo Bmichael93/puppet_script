@@ -1,0 +1,36 @@
+#!/bin/bash
+# Created By: Benjamin Michael
+# Date February 2016
+# Variables
+dns="puppetmaster"
+dns_fqdn="puppetmaster.domain.local"
+#############################################################################
+echo "Using sudo powers -- Activate!"
+echo "Welcome to the Puppet Server Install Script!"
+
+# Install Puppet Function
+function install_puppet() {
+sudo sed -i '1i192.168.1.5	"$dns_fqdn" "$dns"' /etc/hosts
+
+#Update OS
+sudo yum update -y
+sudo yum upgrade -y
+
+# Install Apache with passenger
+cd /tmp
+echo "Grabbing Passenger Repo for Apache"
+curl --fail -sSLo /etc/yum.repos.d/passenger.repo https://oss-binaries.phusionpassenger.com/yum/definitions/el-passenger.repo
+
+echo "Grabbing Puppet Repo for CentOS 7"
+sudo rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm
+sudo yum -y install puppet-server
+sudo printf '%s\n \n' 'dns_alt_names = "$dns", "$dns_fqdn"' 'certname = "$dns_fqdn"' >> /etc/puppet/puppet.conf
+
+# Create puppet SSL Cert
+echo "Creating Server SSL Cert..."
+#Allow cert to be created then kill process
+puppet master --verbose &
+TASK_PID=$!
+sleep 30
+kill $TASK_PID
+}
